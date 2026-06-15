@@ -82,6 +82,16 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	return i, err
 }
 
+const deleteProject = `-- name: DeleteProject :exec
+DELETE FROM projects
+WHERE id = $1
+`
+
+func (q *Queries) DeleteProject(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteProject, id)
+	return err
+}
+
 const getProjectById = `-- name: GetProjectById :one
 SELECT id, name, slug, kek_salt, created_by, created_at FROM projects
 WHERE id = $1 LIMIT 1
@@ -118,6 +128,39 @@ func (q *Queries) GetProjectMember(ctx context.Context, arg GetProjectMemberPara
 	return i, err
 }
 
+const getProjectsForUser = `-- name: GetProjectsForUser :many
+SELECT p.id, p.name, p.slug, p.kek_salt, p.created_by, p.created_at FROM projects p
+JOIN project_members pm ON p.id = pm.project_id
+WHERE pm.user_id = $1
+`
+
+func (q *Queries) GetProjectsForUser(ctx context.Context, userID pgtype.UUID) ([]Project, error) {
+	rows, err := q.db.Query(ctx, getProjectsForUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Project
+	for rows.Next() {
+		var i Project
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.KekSalt,
+			&i.CreatedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, password_hash, created_at FROM users
 WHERE email = $1 LIMIT 1
@@ -147,6 +190,49 @@ func (q *Queries) GetUserById(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const removeProjectMember = `-- name: RemoveProjectMember :exec
+DELETE FROM project_members
+WHERE project_id = $1 AND user_id = $2
+`
+
+type RemoveProjectMemberParams struct {
+	ProjectID pgtype.UUID
+	UserID    pgtype.UUID
+}
+
+func (q *Queries) RemoveProjectMember(ctx context.Context, arg RemoveProjectMemberParams) error {
+	_, err := q.db.Exec(ctx, removeProjectMember, arg.ProjectID, arg.UserID)
+	return err
+}
+
+const updateProject = `-- name: UpdateProject :one
+UPDATE projects
+SET name = COALESCE(NULLIF($2::text, ''), name),
+    slug = COALESCE(NULLIF($3::text, ''), slug)
+WHERE id = $1
+RETURNING id, name, slug, kek_salt, created_by, created_at
+`
+
+type UpdateProjectParams struct {
+	ID      pgtype.UUID
+	Column2 string
+	Column3 string
+}
+
+func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error) {
+	row := q.db.QueryRow(ctx, updateProject, arg.ID, arg.Column2, arg.Column3)
+	var i Project
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.KekSalt,
+		&i.CreatedBy,
 		&i.CreatedAt,
 	)
 	return i, err

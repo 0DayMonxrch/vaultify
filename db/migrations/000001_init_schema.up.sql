@@ -1,11 +1,11 @@
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     slug TEXT UNIQUE NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE projects (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE project_members (
+CREATE TABLE IF NOT EXISTS project_members (
     project_id UUID REFERENCES projects ON DELETE CASCADE,
     user_id UUID REFERENCES users ON DELETE CASCADE,
     role TEXT NOT NULL CHECK (role IN ('owner', 'member')),

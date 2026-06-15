@@ -9,12 +9,17 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/0DayMonxrch/vaultify/internal/auth"
+	"github.com/0DayMonxrch/vaultify/internal/db"
+	"github.com/0DayMonxrch/vaultify/internal/middleware"
+	"github.com/0DayMonxrch/vaultify/internal/projects"
 )
 
 func main() {
@@ -31,7 +36,7 @@ func main() {
 	// Parse configuration
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://vaultify:admin123@localhost:5432/vaultify?sslmode=disable"
+		dbURL = "postgres://vaultify:vaultify_password@localhost:5432/vaultify?sslmode=disable"
 	}
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
@@ -50,6 +55,19 @@ func main() {
 	}
 	log.Info().Msg("Connected to PostgreSQL")
 
+	// Apply migrations on startup
+	migrationPath := "db/migrations/000001_init_schema.up.sql"
+	sqlBytes, err := os.ReadFile(migrationPath)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Unable to read migration file")
+	}
+
+	_, err = dbPool.Exec(ctx, string(sqlBytes))
+	if err != nil {
+		log.Fatal().Err(err).Msg("Unable to execute database migrations")
+	}
+	log.Info().Msg("Database migrations applied successfully")
+
 	// Connect to Redis
 	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
@@ -63,17 +81,39 @@ func main() {
 	}
 	log.Info().Msg("Connected to Redis")
 
+	// Initialize DB queries and session manager
+	queries := db.New(dbPool)
+	sessionMgr := auth.NewSessionManager(rdb)
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "development_only_vaultify_super_secret_key_change_me_in_production"
+		log.Warn().Msg("JWT_SECRET not set, using default development secret key")
+	}
+
+	// Initialize Domain Handlers
+	authHandlers := auth.NewHandlers(queries, sessionMgr, []byte(jwtSecret))
+	projectHandlers := projects.NewHandlers(queries)
+	authMiddleware := middleware.NewAuthMiddleware(queries, []byte(jwtSecret))
+
 	// Setup Router
 	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger) 
-	r.Use(middleware.Recoverer)
+	r.Use(chimiddleware.RequestID)
+	r.Use(chimiddleware.RealIP)
+	r.Use(chimiddleware.Logger) 
+	r.Use(chimiddleware.Recoverer)
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+
+	// Register Auth Routes
+	authHandlers.RegisterRoutes(r, authMiddleware.Authenticator)
+
+	// Register Project Routes
+	projectHandlers.RegisterRoutes(r, authMiddleware)
+
 
 	// Setup HTTP server
 	port := os.Getenv("PORT")

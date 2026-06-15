@@ -27,3 +27,23 @@ VALUES ($1, $2, $3);
 -- name: GetProjectMember :one
 SELECT * FROM project_members
 WHERE project_id = $1 AND user_id = $2 LIMIT 1;
+
+-- name: GetProjectsForUser :many
+SELECT p.* FROM projects p
+JOIN project_members pm ON p.id = pm.project_id
+WHERE pm.user_id = $1;
+
+-- name: RemoveProjectMember :exec
+DELETE FROM project_members
+WHERE project_id = $1 AND user_id = $2;
+
+-- name: UpdateProject :one
+UPDATE projects
+SET name = COALESCE(NULLIF($2::text, ''), name),
+    slug = COALESCE(NULLIF($3::text, ''), slug)
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteProject :exec
+DELETE FROM projects
+WHERE id = $1;

@@ -4,7 +4,7 @@ services:
     container_name: vaultify-db
     environment:
       POSTGRES_USER: vaultify
-      POSTGRES_PASSWORD: admin123
+      POSTGRES_PASSWORD: vaultify_password
       POSTGRES_DB: vaultify
     ports:
       - "5432:5432"
