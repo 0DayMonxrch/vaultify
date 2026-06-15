@@ -5,8 +5,20 @@
 package db
 
 import (
+	"net/netip"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type AuditLog struct {
+	ID        int64
+	UserID    pgtype.UUID
+	ProjectID pgtype.UUID
+	Action    string
+	KeyName   pgtype.Text
+	IpAddress *netip.Addr
+	CreatedAt pgtype.Timestamptz
+}
 
 type Project struct {
 	ID        pgtype.UUID
@@ -21,6 +33,18 @@ type ProjectMember struct {
 	ProjectID pgtype.UUID
 	UserID    pgtype.UUID
 	Role      string
+}
+
+type Secret struct {
+	ID             pgtype.UUID
+	ProjectID      pgtype.UUID
+	KeyName        string
+	Environment    string
+	EncryptedValue string
+	Nonce          string
+	CreatedBy      pgtype.UUID
+	UpdatedAt      pgtype.Timestamptz
+	CreatedAt      pgtype.Timestamptz
 }
 
 type User struct {

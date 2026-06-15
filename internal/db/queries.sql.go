@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"net/netip"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -59,6 +60,45 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 	return i, err
 }
 
+const createSecret = `-- name: CreateSecret :one
+INSERT INTO secrets (project_id, key_name, environment, encrypted_value, nonce, created_by)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, project_id, key_name, environment, encrypted_value, nonce, created_by, updated_at, created_at
+`
+
+type CreateSecretParams struct {
+	ProjectID      pgtype.UUID
+	KeyName        string
+	Environment    string
+	EncryptedValue string
+	Nonce          string
+	CreatedBy      pgtype.UUID
+}
+
+func (q *Queries) CreateSecret(ctx context.Context, arg CreateSecretParams) (Secret, error) {
+	row := q.db.QueryRow(ctx, createSecret,
+		arg.ProjectID,
+		arg.KeyName,
+		arg.Environment,
+		arg.EncryptedValue,
+		arg.Nonce,
+		arg.CreatedBy,
+	)
+	var i Secret
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.KeyName,
+		&i.Environment,
+		&i.EncryptedValue,
+		&i.Nonce,
+		&i.CreatedBy,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, password_hash)
 VALUES ($1, $2)
@@ -89,6 +129,16 @@ WHERE id = $1
 
 func (q *Queries) DeleteProject(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, deleteProject, id)
+	return err
+}
+
+const deleteSecret = `-- name: DeleteSecret :exec
+DELETE FROM secrets
+WHERE id = $1
+`
+
+func (q *Queries) DeleteSecret(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteSecret, id)
 	return err
 }
 
@@ -161,6 +211,28 @@ func (q *Queries) GetProjectsForUser(ctx context.Context, userID pgtype.UUID) ([
 	return items, nil
 }
 
+const getSecretByID = `-- name: GetSecretByID :one
+SELECT id, project_id, key_name, environment, encrypted_value, nonce, created_by, updated_at, created_at FROM secrets
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetSecretByID(ctx context.Context, id pgtype.UUID) (Secret, error) {
+	row := q.db.QueryRow(ctx, getSecretByID, id)
+	var i Secret
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.KeyName,
+		&i.Environment,
+		&i.EncryptedValue,
+		&i.Nonce,
+		&i.CreatedBy,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT id, email, password_hash, created_at FROM users
 WHERE email = $1 LIMIT 1
@@ -193,6 +265,111 @@ func (q *Queries) GetUserById(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const insertAuditLog = `-- name: InsertAuditLog :exec
+INSERT INTO audit_log (user_id, project_id, action, key_name, ip_address)
+VALUES ($1, $2, $3, $4, $5)
+`
+
+type InsertAuditLogParams struct {
+	UserID    pgtype.UUID
+	ProjectID pgtype.UUID
+	Action    string
+	KeyName   pgtype.Text
+	IpAddress *netip.Addr
+}
+
+func (q *Queries) InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) error {
+	_, err := q.db.Exec(ctx, insertAuditLog,
+		arg.UserID,
+		arg.ProjectID,
+		arg.Action,
+		arg.KeyName,
+		arg.IpAddress,
+	)
+	return err
+}
+
+const listAuditLogsByProject = `-- name: ListAuditLogsByProject :many
+SELECT id, user_id, project_id, action, key_name, ip_address, created_at FROM audit_log
+WHERE project_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListAuditLogsByProjectParams struct {
+	ProjectID pgtype.UUID
+	Limit     int32
+	Offset    int32
+}
+
+func (q *Queries) ListAuditLogsByProject(ctx context.Context, arg ListAuditLogsByProjectParams) ([]AuditLog, error) {
+	rows, err := q.db.Query(ctx, listAuditLogsByProject, arg.ProjectID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuditLog
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.ProjectID,
+			&i.Action,
+			&i.KeyName,
+			&i.IpAddress,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSecretsByProject = `-- name: ListSecretsByProject :many
+SELECT id, key_name, environment, updated_at, created_at
+FROM secrets
+WHERE project_id = $1
+`
+
+type ListSecretsByProjectRow struct {
+	ID          pgtype.UUID
+	KeyName     string
+	Environment string
+	UpdatedAt   pgtype.Timestamptz
+	CreatedAt   pgtype.Timestamptz
+}
+
+func (q *Queries) ListSecretsByProject(ctx context.Context, projectID pgtype.UUID) ([]ListSecretsByProjectRow, error) {
+	rows, err := q.db.Query(ctx, listSecretsByProject, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSecretsByProjectRow
+	for rows.Next() {
+		var i ListSecretsByProjectRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.KeyName,
+			&i.Environment,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const removeProjectMember = `-- name: RemoveProjectMember :exec
@@ -233,6 +410,38 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 		&i.Slug,
 		&i.KekSalt,
 		&i.CreatedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const updateSecret = `-- name: UpdateSecret :one
+UPDATE secrets
+SET encrypted_value = $2,
+    nonce = $3,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, project_id, key_name, environment, encrypted_value, nonce, created_by, updated_at, created_at
+`
+
+type UpdateSecretParams struct {
+	ID             pgtype.UUID
+	EncryptedValue string
+	Nonce          string
+}
+
+func (q *Queries) UpdateSecret(ctx context.Context, arg UpdateSecretParams) (Secret, error) {
+	row := q.db.QueryRow(ctx, updateSecret, arg.ID, arg.EncryptedValue, arg.Nonce)
+	var i Secret
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.KeyName,
+		&i.Environment,
+		&i.EncryptedValue,
+		&i.Nonce,
+		&i.CreatedBy,
+		&i.UpdatedAt,
 		&i.CreatedAt,
 	)
 	return i, err

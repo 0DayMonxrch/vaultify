@@ -47,3 +47,39 @@ RETURNING *;
 -- name: DeleteProject :exec
 DELETE FROM projects
 WHERE id = $1;
+
+-- name: CreateSecret :one
+INSERT INTO secrets (project_id, key_name, environment, encrypted_value, nonce, created_by)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING *;
+
+-- name: GetSecretByID :one
+SELECT * FROM secrets
+WHERE id = $1 LIMIT 1;
+
+-- name: ListSecretsByProject :many
+SELECT id, key_name, environment, updated_at, created_at
+FROM secrets
+WHERE project_id = $1;
+
+-- name: UpdateSecret :one
+UPDATE secrets
+SET encrypted_value = $2,
+    nonce = $3,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteSecret :exec
+DELETE FROM secrets
+WHERE id = $1;
+
+-- name: InsertAuditLog :exec
+INSERT INTO audit_log (user_id, project_id, action, key_name, ip_address)
+VALUES ($1, $2, $3, $4, $5);
+
+-- name: ListAuditLogsByProject :many
+SELECT * FROM audit_log
+WHERE project_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;

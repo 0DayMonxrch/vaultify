@@ -16,10 +16,12 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/0DayMonxrch/vaultify/internal/audit"
 	"github.com/0DayMonxrch/vaultify/internal/auth"
 	"github.com/0DayMonxrch/vaultify/internal/db"
 	"github.com/0DayMonxrch/vaultify/internal/middleware"
 	"github.com/0DayMonxrch/vaultify/internal/projects"
+	"github.com/0DayMonxrch/vaultify/internal/secrets"
 )
 
 func main() {
@@ -56,15 +58,21 @@ func main() {
 	log.Info().Msg("Connected to PostgreSQL")
 
 	// Apply migrations on startup
-	migrationPath := "db/migrations/000001_init_schema.up.sql"
-	sqlBytes, err := os.ReadFile(migrationPath)
-	if err != nil {
-		log.Fatal().Err(err).Msg("Unable to read migration file")
+	migrationPaths := []string{
+		"db/migrations/000001_init_schema.up.sql",
+		"db/migrations/004_secrets.up.sql",
+		"db/migrations/005_audit_log.up.sql",
 	}
-
-	_, err = dbPool.Exec(ctx, string(sqlBytes))
-	if err != nil {
-		log.Fatal().Err(err).Msg("Unable to execute database migrations")
+	for _, migrationPath := range migrationPaths {
+		sqlBytes, err := os.ReadFile(migrationPath)
+		if err != nil {
+			log.Warn().Err(err).Msgf("Unable to read migration file %s", migrationPath)
+			continue
+		}
+		_, err = dbPool.Exec(ctx, string(sqlBytes))
+		if err != nil {
+			log.Warn().Err(err).Msgf("Unable to execute database migration %s", migrationPath)
+		}
 	}
 	log.Info().Msg("Database migrations applied successfully")
 
@@ -96,6 +104,24 @@ func main() {
 	projectHandlers := projects.NewHandlers(queries)
 	authMiddleware := middleware.NewAuthMiddleware(queries, []byte(jwtSecret))
 
+	auditSvc := audit.NewAuditService(queries)
+	masterKeyStr := os.Getenv("MASTER_KEY")
+	if masterKeyStr == "" {
+		masterKeyStr = "development_only_master_key_1234"
+	}
+	masterKey := []byte(masterKeyStr)
+	if len(masterKey) > 32 {
+		masterKey = masterKey[:32]
+	} else if len(masterKey) < 32 {
+		padded := make([]byte, 32)
+		copy(padded, masterKey)
+		masterKey = padded
+	}
+	secretsSvc := secrets.NewSecretService(queries, auditSvc, masterKey)
+
+	auditHandlers := audit.NewHandlers(auditSvc)
+	secretsHandlers := secrets.NewHandlers(secretsSvc)
+
 	// Setup Router
 	r := chi.NewRouter()
 	r.Use(chimiddleware.RequestID)
@@ -113,6 +139,8 @@ func main() {
 
 	// Register Project Routes
 	projectHandlers.RegisterRoutes(r, authMiddleware)
+	auditHandlers.RegisterRoutes(r, authMiddleware)
+	secretsHandlers.RegisterRoutes(r, authMiddleware)
 
 
 	// Setup HTTP server

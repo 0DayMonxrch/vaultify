@@ -6,4 +6,5 @@ const (
 	UserID    Key = "user_id"
 	ProjectID Key = "project_id"
 	Role      Key = "role"
+	IPAddress Key = "ip_address"
 )
