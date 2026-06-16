@@ -95,7 +95,7 @@ func TestSecretService_RoundTripFlow(t *testing.T) {
 				// intercept the args to check ciphertext is passed, not plaintext
 				storedCiphertext = args[3].(string) // EncryptedValue
 				storedNonce = args[4].(string)      // Nonce
-				
+
 				// assert it's not plaintext
 				rawCipher, _ := base64.StdEncoding.DecodeString(storedCiphertext)
 				if string(rawCipher) == string(plaintext) {

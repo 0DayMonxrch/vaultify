@@ -22,6 +22,7 @@ import (
 	"github.com/0DayMonxrch/vaultify/internal/middleware"
 	"github.com/0DayMonxrch/vaultify/internal/projects"
 	"github.com/0DayMonxrch/vaultify/internal/secrets"
+	"github.com/0DayMonxrch/vaultify/internal/tokens"
 )
 
 func main() {
@@ -121,12 +122,13 @@ func main() {
 
 	auditHandlers := audit.NewHandlers(auditSvc)
 	secretsHandlers := secrets.NewHandlers(secretsSvc)
+	tokenHandlers := tokens.NewHandlers(queries)
 
 	// Setup Router
 	r := chi.NewRouter()
 	r.Use(chimiddleware.RequestID)
 	r.Use(chimiddleware.RealIP)
-	r.Use(chimiddleware.Logger) 
+	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -141,7 +143,7 @@ func main() {
 	projectHandlers.RegisterRoutes(r, authMiddleware)
 	auditHandlers.RegisterRoutes(r, authMiddleware)
 	secretsHandlers.RegisterRoutes(r, authMiddleware)
-
+	tokenHandlers.RegisterRoutes(r, authMiddleware.Authenticator)
 
 	// Setup HTTP server
 	port := os.Getenv("PORT")
@@ -161,10 +163,10 @@ func main() {
 		<-sigint
 
 		log.Info().Msg("Received interrupt signal, shutting down server...")
-		
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		
+
 		if err := srv.Shutdown(ctx); err != nil {
 			log.Error().Err(err).Msg("HTTP server Shutdown Error")
 		}

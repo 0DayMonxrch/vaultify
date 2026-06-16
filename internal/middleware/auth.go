@@ -8,11 +8,11 @@ import (
 	"github.com/0DayMonxrch/vaultify/internal/auth"
 	"github.com/0DayMonxrch/vaultify/internal/ctxkey"
 	"github.com/0DayMonxrch/vaultify/internal/db"
+	"github.com/0DayMonxrch/vaultify/internal/tokens"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
-
-
 
 type AuthMiddleware struct {
 	jwtSecret []byte
@@ -28,6 +28,39 @@ func NewAuthMiddleware(queries *db.Queries, jwtSecret []byte) *AuthMiddleware {
 
 func (m *AuthMiddleware) Authenticator(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// API Token short-circuit
+		vaultifyToken := r.Header.Get("X-Vaultify-Token")
+		if vaultifyToken != "" {
+			if !strings.HasPrefix(vaultifyToken, tokens.TokenPrefix) {
+				http.Error(w, "invalid token format", http.StatusUnauthorized)
+				return
+			}
+
+			hash := tokens.Hash(vaultifyToken)
+			tkn, err := m.queries.GetTokenByHash(r.Context(), hash)
+			if err != nil {
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			// Format UUIDs back to string
+			userIDStr := uuid.UUID(tkn.UserID.Bytes).String()
+			projectIDStr := uuid.UUID(tkn.ProjectID.Bytes).String()
+
+			ctx := context.WithValue(r.Context(), ctxkey.UserID, userIDStr)
+			ctx = context.WithValue(ctx, ctxkey.ProjectID, projectIDStr)
+			ctx = context.WithValue(ctx, ctxkey.Role, tkn.Role)
+
+			// Async update last_used_at
+			go func() {
+				_ = m.queries.UpdateTokenLastUsed(context.Background(), tkn.ID)
+			}()
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
+		// Standard JWT flow
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
 			http.Error(w, "missing authorization header", http.StatusUnauthorized)
@@ -69,6 +102,17 @@ func (m *AuthMiddleware) ContextEnricher(next http.Handler) http.Handler {
 		projectIDStr := chi.URLParam(r, "id")
 		if projectIDStr == "" {
 			http.Error(w, "missing project id", http.StatusBadRequest)
+			return
+		}
+
+		// If token already injected role and project ID, verify it matches
+		if injectedRole, ok := r.Context().Value(ctxkey.Role).(string); ok && injectedRole != "" {
+			injectedProjID, ok := r.Context().Value(ctxkey.ProjectID).(string)
+			if !ok || injectedProjID != projectIDStr {
+				http.Error(w, "forbidden: token project scope mismatch", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
 			return
 		}
 

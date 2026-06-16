@@ -37,7 +37,7 @@ func TestWriteLog_ContextExtraction(t *testing.T) {
 	projectID := uuid.New()
 	userID := uuid.New()
 	ipStr := "192.168.1.100"
-	
+
 	ctx := context.WithValue(context.Background(), ctxkey.UserID, userID.String())
 	ctx = context.WithValue(ctx, ctxkey.IPAddress, ipStr)
 

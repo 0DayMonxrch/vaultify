@@ -10,6 +10,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ApiToken struct {
+	ID          pgtype.UUID
+	UserID      pgtype.UUID
+	ProjectID   pgtype.UUID
+	Name        string
+	TokenHash   string
+	TokenPrefix string
+	Role        string
+	LastUsedAt  pgtype.Timestamptz
+	ExpiresAt   pgtype.Timestamptz
+	Revoked     bool
+	CreatedAt   pgtype.Timestamptz
+}
+
 type AuditLog struct {
 	ID        int64
 	UserID    pgtype.UUID

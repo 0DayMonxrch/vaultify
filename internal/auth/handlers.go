@@ -302,7 +302,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router, authenticator func(http.Handler)
 		r.Post("/login", h.Login)
 		r.Post("/refresh", h.Refresh)
 		r.Delete("/logout", h.Logout) // Not strictly behind JWT in router, handled by Cookie
-		
+
 		r.With(authenticator).Get("/me", h.GetMe)
 	})
 }

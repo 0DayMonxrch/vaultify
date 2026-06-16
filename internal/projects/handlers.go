@@ -34,7 +34,7 @@ func (h *Handlers) RegisterRoutes(r chi.Router, authMiddleware *middleware.AuthM
 			r.Use(authMiddleware.ContextEnricher)
 
 			r.With(authMiddleware.RequireMember).Get("/", h.GetProject)
-			
+
 			// Project settings (Owner only)
 			r.With(authMiddleware.RequireOwner).Patch("/", h.UpdateProject)
 			r.With(authMiddleware.RequireOwner).Delete("/", h.DeleteProject)
@@ -133,7 +133,7 @@ func (h *Handlers) ListProjects(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) GetProject(w http.ResponseWriter, r *http.Request) {
 	projectIDStr := chi.URLParam(r, "id")
-	
+
 	var projectUUID pgtype.UUID
 	if err := projectUUID.Scan(projectIDStr); err != nil {
 		http.Error(w, "invalid project id", http.StatusBadRequest)
@@ -152,7 +152,7 @@ func (h *Handlers) GetProject(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) AddMember(w http.ResponseWriter, r *http.Request) {
 	projectIDStr := chi.URLParam(r, "id")
-	
+
 	var projectUUID pgtype.UUID
 	if err := projectUUID.Scan(projectIDStr); err != nil {
 		http.Error(w, "invalid project id", http.StatusBadRequest)
@@ -195,7 +195,7 @@ func (h *Handlers) AddMember(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	projectIDStr := chi.URLParam(r, "id")
 	targetUserIDStr := chi.URLParam(r, "userId")
-	
+
 	var projectUUID pgtype.UUID
 	if err := projectUUID.Scan(projectIDStr); err != nil {
 		http.Error(w, "invalid project id", http.StatusBadRequest)
@@ -229,7 +229,7 @@ func (h *Handlers) RemoveMember(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	projectIDStr := chi.URLParam(r, "id")
-	
+
 	var projectUUID pgtype.UUID
 	if err := projectUUID.Scan(projectIDStr); err != nil {
 		http.Error(w, "invalid project id", http.StatusBadRequest)
@@ -262,7 +262,7 @@ func (h *Handlers) UpdateProject(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	projectIDStr := chi.URLParam(r, "id")
-	
+
 	var projectUUID pgtype.UUID
 	if err := projectUUID.Scan(projectIDStr); err != nil {
 		http.Error(w, "invalid project id", http.StatusBadRequest)
