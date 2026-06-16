@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"net/http"
 	"os"
 	"os/signal"
@@ -94,10 +95,18 @@ func main() {
 	queries := db.New(dbPool)
 	sessionMgr := auth.NewSessionManager(rdb)
 
+	env := os.Getenv("ENV")
+	isProd := env == "production" || env == "prod"
+
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
+		if isProd {
+			log.Fatal().Msg("JWT_SECRET environment variable is required in production environment")
+		}
 		jwtSecret = "development_only_vaultify_super_secret_key_change_me_in_production"
 		log.Warn().Msg("JWT_SECRET not set, using default development secret key")
+	} else if isProd && jwtSecret == "development_only_vaultify_super_secret_key_change_me_in_production" {
+		log.Fatal().Msg("JWT_SECRET cannot be the default development key in production environment")
 	}
 
 	// Initialize Domain Handlers
@@ -106,17 +115,45 @@ func main() {
 	authMiddleware := middleware.NewAuthMiddleware(queries, []byte(jwtSecret))
 
 	auditSvc := audit.NewAuditService(queries)
+
 	masterKeyStr := os.Getenv("MASTER_KEY")
 	if masterKeyStr == "" {
+		if isProd {
+			log.Fatal().Msg("MASTER_KEY environment variable is required in production environment")
+		}
+		log.Warn().Msg("MASTER_KEY not set, using default development master key")
 		masterKeyStr = "development_only_master_key_1234"
+	} else if isProd && masterKeyStr == "development_only_master_key_1234" {
+		log.Fatal().Msg("MASTER_KEY cannot be the default development key in production environment")
 	}
-	masterKey := []byte(masterKeyStr)
-	if len(masterKey) > 32 {
-		masterKey = masterKey[:32]
-	} else if len(masterKey) < 32 {
-		padded := make([]byte, 32)
-		copy(padded, masterKey)
-		masterKey = padded
+
+	var masterKey []byte
+	// If the MASTER_KEY is a 64-character hex string, decode it to its 32-byte representation.
+	if len(masterKeyStr) == 64 {
+		decoded, err := hex.DecodeString(masterKeyStr)
+		if err == nil {
+			masterKey = decoded
+		}
+	}
+
+	// If not parsed as hex, use the raw string bytes.
+	if len(masterKey) == 0 {
+		masterKey = []byte(masterKeyStr)
+	}
+
+	// Enforce 32-byte key length constraint
+	if len(masterKey) != 32 {
+		if isProd {
+			log.Fatal().Msgf("MASTER_KEY must be exactly 32 bytes (or 64 hex characters) in production, got %d bytes", len(masterKey))
+		}
+		// In development/testing, pad or truncate to 32 bytes for backwards compatibility
+		if len(masterKey) > 32 {
+			masterKey = masterKey[:32]
+		} else {
+			padded := make([]byte, 32)
+			copy(padded, masterKey)
+			masterKey = padded
+		}
 	}
 	secretsSvc := secrets.NewSecretService(queries, auditSvc, masterKey)
 
