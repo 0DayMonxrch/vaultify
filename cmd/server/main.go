@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -17,6 +19,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/0DayMonxrch/vaultify/frontend"
 	"github.com/0DayMonxrch/vaultify/internal/audit"
 	"github.com/0DayMonxrch/vaultify/internal/auth"
 	"github.com/0DayMonxrch/vaultify/internal/db"
@@ -173,14 +176,38 @@ func main() {
 		w.Write([]byte("OK"))
 	})
 
-	// Register Auth Routes
-	authHandlers.RegisterRoutes(r, authMiddleware.Authenticator)
+	// Register API Routes under /api/v1
+	r.Route("/api/v1", func(r chi.Router) {
+		authHandlers.RegisterRoutes(r, authMiddleware.Authenticator)
+		projectHandlers.RegisterRoutes(r, authMiddleware)
+		auditHandlers.RegisterRoutes(r, authMiddleware)
+		secretsHandlers.RegisterRoutes(r, authMiddleware)
+		tokenHandlers.RegisterRoutes(r, authMiddleware.Authenticator)
+	})
 
-	// Register Project Routes
-	projectHandlers.RegisterRoutes(r, authMiddleware)
-	auditHandlers.RegisterRoutes(r, authMiddleware)
-	secretsHandlers.RegisterRoutes(r, authMiddleware)
-	tokenHandlers.RegisterRoutes(r, authMiddleware.Authenticator)
+	// Setup static file serving with React Router fallback
+	subFS, err := fs.Sub(frontend.DistFS, "dist")
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get sub fs for frontend")
+	}
+	fileServer := http.FileServer(http.FS(subFS))
+
+	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/")
+		if path == "" {
+			path = "index.html"
+		}
+
+		f, err := subFS.Open(path)
+		if err != nil {
+			path = "index.html"
+		} else {
+			f.Close()
+		}
+
+		r.URL.Path = "/" + path
+		fileServer.ServeHTTP(w, r)
+	})
 
 	// Setup HTTP server
 	port := os.Getenv("PORT")

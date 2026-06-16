@@ -1,0 +1,24 @@
+# Git
+.git
+.gitignore
+
+# Go
+vendor/
+server.exe
+server.exe~
+*.exe
+
+# Environments and Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Temporary files
+tmp/
+*.tmp
+*.log
+
+# Frontend (dist will be rebuilt or copied depending on the stage)
+frontend/node_modules/
+frontend/dist/
