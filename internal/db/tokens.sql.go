@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// nosec G101
+// #nosec G101
 const createToken = `-- name: CreateToken :one
 INSERT INTO api_tokens (user_id, project_id, name, token_hash, token_prefix, role, expires_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -55,7 +55,7 @@ func (q *Queries) CreateToken(ctx context.Context, arg CreateTokenParams) (ApiTo
 	return i, err
 }
 
-// nosec G101
+// #nosec G101
 const getTokenByHash = `-- name: GetTokenByHash :one
 SELECT id, user_id, project_id, name, token_hash, token_prefix, role, last_used_at, expires_at, revoked, created_at FROM api_tokens
 WHERE token_hash = $1 
@@ -83,7 +83,7 @@ func (q *Queries) GetTokenByHash(ctx context.Context, tokenHash string) (ApiToke
 	return i, err
 }
 
-// nosec G101
+// #nosec G101
 const listUserTokens = `-- name: ListUserTokens :many
 SELECT id, user_id, project_id, name, token_hash, token_prefix, role, last_used_at, expires_at, revoked, created_at FROM api_tokens
 WHERE user_id = $1
@@ -122,7 +122,7 @@ func (q *Queries) ListUserTokens(ctx context.Context, userID pgtype.UUID) ([]Api
 	return items, nil
 }
 
-// nosec G101
+// #nosec G101
 const softRevokeToken = `-- name: SoftRevokeToken :exec
 UPDATE api_tokens
 SET revoked = true
@@ -139,7 +139,7 @@ func (q *Queries) SoftRevokeToken(ctx context.Context, arg SoftRevokeTokenParams
 	return err
 }
 
-// nosec G101
+// #nosec G101
 const updateTokenLastUsed = `-- name: UpdateTokenLastUsed :exec
 UPDATE api_tokens
 SET last_used_at = NOW()

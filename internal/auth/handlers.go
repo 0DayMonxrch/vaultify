@@ -136,7 +136,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Set HttpOnly cookie
 	isProd := os.Getenv("ENV") == "production"
-	//nosec G124
+	// #nosec G124
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    compositeToken,
@@ -156,7 +156,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	//nosec G117
+	// #nosec G117
 	_ = json.NewEncoder(w).Encode(TokenResponse{
 		AccessToken: accessToken,
 		ExpiresIn:   600, // 10 minutes
@@ -202,7 +202,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	// Set new HttpOnly cookie
 	isProd := os.Getenv("ENV") == "production"
-	//nosec G124
+	// #nosec G124
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    newCompositeToken,
@@ -222,7 +222,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	//nosec G117
+	// #nosec G117
 	_ = json.NewEncoder(w).Encode(TokenResponse{
 		AccessToken: accessToken,
 		ExpiresIn:   600, // 10 minutes
@@ -261,7 +261,7 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) clearCookie(w http.ResponseWriter) {
 	isProd := os.Getenv("ENV") == "production"
-	//nosec G124
+	// #nosec G124
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",

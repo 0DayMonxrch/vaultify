@@ -64,7 +64,7 @@ var runCmd = &cobra.Command{
 			cancel()
 		}()
 
-		//nosec G204
+		// #nosec G204
 		proc := exec.CommandContext(ctx, args[0], args[1:]...)
 		proc.Env = append(os.Environ(), envVars...)
 		proc.Stdout = cmd.OutOrStdout()

@@ -59,7 +59,7 @@ func LoadConfig() (*Config, error) {
 		return nil, err
 	}
 
-	//nosec G304
+	// #nosec G304
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
