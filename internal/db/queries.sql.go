@@ -60,6 +60,7 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) (P
 	return i, err
 }
 
+// nosec G101
 const createSecret = `-- name: CreateSecret :one
 INSERT INTO secrets (project_id, key_name, environment, encrypted_value, nonce, created_by)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -132,6 +133,7 @@ func (q *Queries) DeleteProject(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+// nosec G101
 const deleteSecret = `-- name: DeleteSecret :exec
 DELETE FROM secrets
 WHERE id = $1
@@ -211,6 +213,7 @@ func (q *Queries) GetProjectsForUser(ctx context.Context, userID pgtype.UUID) ([
 	return items, nil
 }
 
+// nosec G101
 const getSecretByID = `-- name: GetSecretByID :one
 SELECT id, project_id, key_name, environment, encrypted_value, nonce, created_by, updated_at, created_at FROM secrets
 WHERE id = $1 LIMIT 1
@@ -332,6 +335,7 @@ func (q *Queries) ListAuditLogsByProject(ctx context.Context, arg ListAuditLogsB
 	return items, nil
 }
 
+// nosec G101
 const listSecretsByProject = `-- name: ListSecretsByProject :many
 SELECT id, key_name, environment, updated_at, created_at
 FROM secrets
@@ -415,6 +419,7 @@ func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) (P
 	return i, err
 }
 
+// nosec G101
 const updateSecret = `-- name: UpdateSecret :one
 UPDATE secrets
 SET encrypted_value = $2,

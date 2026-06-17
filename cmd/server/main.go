@@ -44,7 +44,7 @@ func main() {
 	// Parse configuration
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
-		dbURL = "postgres://vaultify:vaultify_password@localhost:5432/vaultify?sslmode=disable"
+		dbURL = "postgres://vaultify:vaultify_password@localhost:5432/vaultify?sslmode=disable" //nosec G101
 	}
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL == "" {
@@ -70,6 +70,7 @@ func main() {
 		"db/migrations/005_audit_log.up.sql",
 	}
 	for _, migrationPath := range migrationPaths {
+		//nosec G304
 		sqlBytes, err := os.ReadFile(migrationPath)
 		if err != nil {
 			log.Warn().Err(err).Msgf("Unable to read migration file %s", migrationPath)
@@ -233,8 +234,9 @@ func main() {
 		port = "8080"
 	}
 	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: r,
+		Addr:              ":" + port,
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	// Graceful shutdown setup

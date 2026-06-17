@@ -53,7 +53,7 @@ func (m *AuthMiddleware) Authenticator(next http.Handler) http.Handler {
 
 			// Async update last_used_at
 			go func() {
-				_ = m.queries.UpdateTokenLastUsed(context.Background(), tkn.ID)
+				_ = m.queries.UpdateTokenLastUsed(context.WithoutCancel(r.Context()), tkn.ID)
 			}()
 
 			next.ServeHTTP(w, r.WithContext(ctx))

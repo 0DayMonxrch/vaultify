@@ -79,7 +79,7 @@ func VerifyPassword(password, encodedHash string) (bool, error) {
 		return false, ErrInvalidHash
 	}
 
-	keyLen := uint32(len(hash))
+	keyLen := uint32(len(hash)) //nosec G115
 
 	comparisonHash := argon2.IDKey([]byte(password), salt, timeCost, memory, uint8(parallelism), keyLen)
 

@@ -37,3 +37,4 @@ Thumbs.db
 # Project specific
 test_*.ps1
 test_e2e.go
+security-fix/
