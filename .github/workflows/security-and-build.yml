@@ -60,11 +60,18 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      # - name: Run golangci-lint (Error:version stuck at Go 1.24!!)
+      #   uses: golangci/golangci-lint-action@v6
+      #   with:
+      #     version: latest
+      #     args: --timeout=5m
+      
+      - name: Compile golangci-lint from source
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          args: --timeout=5m
+        # go install places the binary in the GOPATH bin directory
+        run: $(go env GOPATH)/bin/golangci-lint run --timeout=5m
 
       - name: Run Go Unit Tests
         run: go test ./... -race -v
