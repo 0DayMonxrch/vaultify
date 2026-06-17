@@ -55,11 +55,11 @@ var secretsListCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "KEY\tENVIRONMENT\tCREATED AT\tUPDATED AT")
+		_, _ = fmt.Fprintln(w, "KEY\tENVIRONMENT\tCREATED AT\tUPDATED AT")
 		for _, s := range secrets {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", s.KeyName, s.Environment, s.CreatedAt, s.UpdatedAt)
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", s.KeyName, s.Environment, s.CreatedAt, s.UpdatedAt)
 		}
-		w.Flush()
+		_ = w.Flush()
 		return nil
 	},
 }
@@ -67,7 +67,7 @@ var secretsListCmd = &cobra.Command{
 func init() {
 	secretsListCmd.Flags().StringVar(&projectSlug, "project", "", "Project slug")
 	secretsListCmd.Flags().StringVar(&secretEnv, "env", "", "Environment name")
-	secretsListCmd.MarkFlagRequired("project")
+	_ = secretsListCmd.MarkFlagRequired("project")
 
 	secretsCmd.AddCommand(secretsListCmd)
 	RootCmd.AddCommand(secretsCmd)

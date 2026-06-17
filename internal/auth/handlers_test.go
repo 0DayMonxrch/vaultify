@@ -49,7 +49,7 @@ func TestHandlers_RegisterAndLoginLifecycle(t *testing.T) {
 	rdb := redis.NewClient(&redis.Options{
 		Addr: "localhost:6379",
 	})
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		t.Skip("Redis is not available locally, skipping handlers tests")

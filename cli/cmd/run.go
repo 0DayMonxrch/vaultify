@@ -80,7 +80,6 @@ var runCmd = &cobra.Command{
 		for i := range envVars {
 			envVars[i] = ""
 		}
-		envVars = nil
 
 		err = proc.Wait()
 		if err != nil {
@@ -97,7 +96,7 @@ var runCmd = &cobra.Command{
 func init() {
 	runCmd.Flags().StringVar(&projectSlug, "project", "", "Project slug")
 	runCmd.Flags().StringVar(&secretEnv, "env", "", "Environment name")
-	runCmd.MarkFlagRequired("project")
+	_ = runCmd.MarkFlagRequired("project")
 
 	RootCmd.AddCommand(runCmd)
 }

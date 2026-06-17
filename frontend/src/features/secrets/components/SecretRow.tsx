@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Key, Eye, Loader2, Check, Copy, EyeOff, RotateCcw, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Secret } from '../../../api/endpoints/secrets.api';
 import { useRevealSecret } from '../hooks/useRevealSecret';
 import { useDeleteSecret } from '../hooks/useDeleteSecret';
 import { useClipboard } from '../../../hooks/useClipboard';
-import { useProject } from '../../projects/hooks/useProject';
+import { usePermission } from '../../../hooks/usePermission';
 import { EditSecretDialog } from './EditSecretDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,8 +45,8 @@ export const SecretRow: React.FC<SecretRowProps> = ({ project_id, secret }) => {
   const { mutateAsync: fetchSecret } = useRevealSecret();
   const { mutate: deleteSecret } = useDeleteSecret();
   const { copy } = useClipboard();
-  const { data: project } = useProject(project_id);
-  const isOwner = project?.isOwner || false;
+  const { canDeleteSecret } = usePermission();
+  const isOwner = canDeleteSecret;
 
   const timerRef = useRef<number | null>(null);
 
@@ -98,9 +99,17 @@ export const SecretRow: React.FC<SecretRowProps> = ({ project_id, secret }) => {
   };
 
   const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this secret?')) {
-      deleteSecret({ projectId: project_id, secretId: secret.id });
-    }
+    toast('Delete Secret?', {
+      description: 'Are you sure you want to delete this secret? This action cannot be undone.',
+      action: {
+        label: 'Delete',
+        onClick: () => deleteSecret({ projectId: project_id, secretId: secret.id })
+      },
+      cancel: {
+        label: 'Cancel',
+        onClick: () => {}
+      }
+    });
   };
 
   useEffect(() => {

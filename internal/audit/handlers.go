@@ -88,11 +88,13 @@ func (h *Handlers) HandleListAuditLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"data":        events,
 		"total":       total,
 		"page":        page,
 		"per_page":    limit,
 		"total_pages": totalPages,
-	})
+	}); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }

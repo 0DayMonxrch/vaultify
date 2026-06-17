@@ -33,11 +33,11 @@ var projectsListCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "ID\tNAME\tSLUG\tCREATED AT")
+		_, _ = fmt.Fprintln(w, "ID\tNAME\tSLUG\tCREATED AT")
 		for _, p := range projects {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", p.ID, p.Name, p.Slug, p.CreatedAt)
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", p.ID, p.Name, p.Slug, p.CreatedAt)
 		}
-		w.Flush()
+		_ = w.Flush()
 		return nil
 	},
 }

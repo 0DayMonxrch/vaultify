@@ -116,7 +116,7 @@ func TestHandlers_TokenLifecycle(t *testing.T) {
 		// We add a dummy endpoint to test X-Vaultify-Token injection
 		r.Get("/test-secret", func(w http.ResponseWriter, r *http.Request) {
 			role, _ := r.Context().Value(ctxkey.Role).(string)
-			w.Write([]byte(role))
+			_, _ = w.Write([]byte(role))
 		})
 	})
 

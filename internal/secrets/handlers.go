@@ -70,7 +70,9 @@ func (h *Handlers) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(secret)
+	if err := json.NewEncoder(w).Encode(secret); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) HandleListSecrets(w http.ResponseWriter, r *http.Request) {
@@ -91,10 +93,12 @@ func (h *Handlers) HandleListSecrets(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if secrets == nil {
-		w.Write([]byte("[]"))
+		_, _ = w.Write([]byte("[]"))
 		return
 	}
-	json.NewEncoder(w).Encode(secrets)
+	if err := json.NewEncoder(w).Encode(secrets); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) HandleGetSecret(w http.ResponseWriter, r *http.Request) {
@@ -120,9 +124,11 @@ func (h *Handlers) HandleGetSecret(w http.ResponseWriter, r *http.Request) {
 	defer clear(plaintext)
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"value": string(plaintext),
-	})
+	}); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) HandleUpdateSecret(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +162,9 @@ func (h *Handlers) HandleUpdateSecret(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(secret)
+	if err := json.NewEncoder(w).Encode(secret); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) HandleDeleteSecret(w http.ResponseWriter, r *http.Request) {

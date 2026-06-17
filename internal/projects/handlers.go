@@ -103,7 +103,9 @@ func (h *Handlers) CreateProject(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(project)
+	if err := json.NewEncoder(w).Encode(project); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) ListProjects(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +133,9 @@ func (h *Handlers) ListProjects(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(projects)
+	if err := json.NewEncoder(w).Encode(projects); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) GetProject(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +154,9 @@ func (h *Handlers) GetProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(project)
+	if err := json.NewEncoder(w).Encode(project); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) GetMembers(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +194,9 @@ func (h *Handlers) GetMembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) ListAuditLogs(w http.ResponseWriter, r *http.Request) {
@@ -250,13 +258,15 @@ func (h *Handlers) ListAuditLogs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"data":        events,
 		"total":       total,
 		"page":        page,
 		"per_page":    limit,
 		"total_pages": totalPages,
-	})
+	}); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) AddMember(w http.ResponseWriter, r *http.Request) {
@@ -401,7 +411,9 @@ func (h *Handlers) UpdateProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(project)
+	if err := json.NewEncoder(w).Encode(project); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) DeleteProject(w http.ResponseWriter, r *http.Request) {

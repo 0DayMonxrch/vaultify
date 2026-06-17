@@ -18,7 +18,7 @@ func TestCLILoginLogout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	config.SetConfigPathOverride(filepath.Join(tempDir, ".vaultify", "config"))
 
@@ -74,7 +74,7 @@ func TestCLILoginValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	config.SetConfigPathOverride(filepath.Join(tempDir, ".vaultify", "config"))
 
@@ -106,9 +106,9 @@ func TestCLIReadCommands(t *testing.T) {
 			return
 		}
 
-		if r.URL.Path == "/projects" {
+		if r.URL.Path == "/projects" || r.URL.Path == "/api/v1/projects" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`[
+			_, _ = w.Write([]byte(`[
 				{
 					"ID": "11111111-1111-1111-1111-111111111111",
 					"Name": "Project One",
@@ -119,15 +119,15 @@ func TestCLIReadCommands(t *testing.T) {
 			return
 		}
 
-		if r.URL.Path == "/projects/11111111-1111-1111-1111-111111111111/secrets" {
+		if r.URL.Path == "/projects/11111111-1111-1111-1111-111111111111/secrets" || r.URL.Path == "/api/v1/projects/11111111-1111-1111-1111-111111111111/secrets" {
 			env := r.URL.Query().Get("env")
 			if env != "" && env != "dev" {
 				w.Header().Set("Content-Type", "application/json")
-				w.Write([]byte(`[]`))
+				_, _ = w.Write([]byte(`[]`))
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`[
+			_, _ = w.Write([]byte(`[
 				{
 					"ID": "22222222-2222-2222-2222-222222222222",
 					"KeyName": "DATABASE_URL",
@@ -148,7 +148,7 @@ func TestCLIReadCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() { _ = os.RemoveAll(tempDir) }()
 
 	config.SetConfigPathOverride(filepath.Join(tempDir, ".vaultify", "config"))
 

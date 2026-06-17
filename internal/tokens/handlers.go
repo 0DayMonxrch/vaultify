@@ -103,7 +103,9 @@ func (h *Handlers) CreateToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(CreateTokenResponse{Token: rawToken})
+	if err := json.NewEncoder(w).Encode(CreateTokenResponse{Token: rawToken}); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) ListTokens(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +165,9 @@ func (h *Handlers) ListTokens(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 func (h *Handlers) RevokeToken(w http.ResponseWriter, r *http.Request) {

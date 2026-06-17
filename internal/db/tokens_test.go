@@ -23,12 +23,12 @@ func TestTokenQueries(t *testing.T) {
 	if err != nil {
 		t.Skipf("Unable to connect to database: %v", err)
 	}
-	defer conn.Close(ctx)
+	defer func() { _ = conn.Close(ctx) }()
 
 	// Apply migration for testing
 	upSQL, _ := os.ReadFile(filepath.Join("..", "..", "db", "migrations", "006_api_tokens.up.sql"))
 	if len(upSQL) > 0 {
-		conn.Exec(ctx, string(upSQL))
+		_, _ = conn.Exec(ctx, string(upSQL))
 	}
 
 	queries := db.New(conn)

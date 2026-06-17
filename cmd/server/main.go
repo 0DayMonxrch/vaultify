@@ -22,6 +22,7 @@ import (
 	"github.com/0DayMonxrch/vaultify/frontend"
 	"github.com/0DayMonxrch/vaultify/internal/audit"
 	"github.com/0DayMonxrch/vaultify/internal/auth"
+	"github.com/0DayMonxrch/vaultify/internal/ctxkey"
 	"github.com/0DayMonxrch/vaultify/internal/db"
 	"github.com/0DayMonxrch/vaultify/internal/middleware"
 	"github.com/0DayMonxrch/vaultify/internal/projects"
@@ -87,7 +88,7 @@ func main() {
 		log.Fatal().Err(err).Msg("Unable to parse Redis URL")
 	}
 	rdb := redis.NewClient(opt)
-	defer rdb.Close()
+	defer func() { _ = rdb.Close() }()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
 		log.Fatal().Err(err).Msg("Unable to ping Redis")
@@ -167,13 +168,25 @@ func main() {
 	// Setup Router
 	r := chi.NewRouter()
 	r.Use(chimiddleware.RequestID)
-	r.Use(chimiddleware.RealIP)
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ip := req.Header.Get("Fly-Client-IP")
+			if ip == "" {
+				ip = req.Header.Get("X-Forwarded-For")
+			}
+			if ip == "" {
+				ip = req.RemoteAddr
+			}
+			ctx := context.WithValue(req.Context(), ctxkey.IPAddress, ip)
+			next.ServeHTTP(w, req.WithContext(ctx))
+		})
+	})
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
 
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	})
 
 	// Register API Routes under /api/v1
@@ -205,10 +218,10 @@ func main() {
 				return
 			}
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Write(indexHtml)
+			_, _ = w.Write(indexHtml)
 			return
 		}
-		f.Close()
+		_ = f.Close()
 
 		// Let the standard file server handle existing files (and / directory root)
 		fileServer.ServeHTTP(w, r)
