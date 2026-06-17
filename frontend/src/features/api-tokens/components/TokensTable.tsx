@@ -6,6 +6,8 @@ import { CreateTokenDialog } from './CreateTokenDialog';
 export const TokensTable: React.FC = () => {
   const { data: tokens, isLoading, isError } = useTokens();
 
+  const activeTokens = tokens?.filter(t => !t.revoked);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-card p-4 rounded-xl border border-border/50 shadow-sm">
@@ -40,7 +42,7 @@ export const TokensTable: React.FC = () => {
               </tr>
             ) : isError ? (
               <tr><td colSpan={6} className="p-10 text-center text-destructive font-medium bg-destructive/5">Failed to load API tokens.</td></tr>
-            ) : !tokens || tokens.length === 0 ? (
+            ) : !activeTokens || activeTokens.length === 0 ? (
               <tr>
                 <td colSpan={6} className="p-16 text-center bg-muted/5">
                   <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -53,13 +55,13 @@ export const TokensTable: React.FC = () => {
                 </td>
               </tr>
             ) : (
-              tokens.map(token => (
+              activeTokens.map(token => (
                 <tr key={token.id} className="border-b border-border/50 hover:bg-muted/10 transition-colors">
                   <td className="p-4 font-semibold text-sm text-foreground">{token.name}</td>
-                  <td className="p-4 font-mono text-xs text-muted-foreground tracking-wider">{token.prefix}••••••••</td>
+                  <td className="p-4 font-mono text-xs text-muted-foreground tracking-wider">{token.token_prefix}••••••••</td>
                   <td className="p-4">
                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded bg-secondary text-secondary-foreground">
-                      {token.role_scope}
+                      {token.role}
                     </span>
                   </td>
                   <td className="p-4 text-xs text-muted-foreground font-medium">

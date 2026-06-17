@@ -3,36 +3,59 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useCreateToken } from '../hooks/useTokens';
+import { useProjects } from '../../projects/hooks/useProjects';
 import { useClipboard } from '../../../hooks/useClipboard';
 import { Button } from '../../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
-  role_scope: z.enum(['read', 'write'])
+  role: z.enum(['read', 'write']),
+  project_id: z.string().min(1, 'Project is required')
 });
 
 export const CreateTokenDialog: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   // CRITICAL: Raw token strictly in component state.
   const [rawToken, setRawToken] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState(30);
   const { mutateAsync: createToken, isPending } = useCreateToken();
+  const { data: projects } = useProjects();
   const { copy, copied } = useClipboard();
 
   const { register, handleSubmit, formState: { errors }, reset, control } = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
-    defaultValues: { role_scope: 'read' }
+    defaultValues: { role: 'read', project_id: '' }
   });
 
   const onSubmit = async (data: z.infer<typeof schema>) => {
     try {
       const response = await createToken(data);
-      setRawToken(response.raw_token);
+      setRawToken(response.token);
+      setTimeLeft(30);
       reset();
     } catch (e) {
       console.error(e);
     }
   };
+
+  React.useEffect(() => {
+    if (!rawToken) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          setRawToken(null);
+          setIsOpen(false);
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [rawToken]);
 
   const closeDialog = () => {
     setIsOpen(false);
@@ -55,6 +78,9 @@ export const CreateTokenDialog: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <h2 className="text-xl font-bold tracking-tight">Save your token now</h2>
+                  <span className="ml-auto bg-amber-500/10 text-amber-600 px-2.5 py-0.5 rounded-full text-sm font-bold animate-pulse">
+                    {timeLeft}s
+                  </span>
                 </div>
                 <div className="bg-muted/50 p-5 rounded-xl border border-border shadow-inner">
                   <p className="text-sm font-medium mb-4 text-muted-foreground leading-relaxed">
@@ -87,9 +113,29 @@ export const CreateTokenDialog: React.FC = () => {
                     {errors.name && <p className="text-destructive text-xs mt-1.5 font-medium">{errors.name.message}</p>}
                   </div>
                   <div>
+                    <label className="block text-sm font-medium mb-1.5 text-foreground">Project</label>
+                    <Controller
+                      name="project_id"
+                      control={control}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select project" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {projects?.map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.project_id && <p className="text-destructive text-xs mt-1.5 font-medium">{errors.project_id.message}</p>}
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium mb-1.5 text-foreground">Scope</label>
                     <Controller
-                      name="role_scope"
+                      name="role"
                       control={control}
                       render={({ field }) => (
                         <Select onValueChange={field.onChange} defaultValue={field.value}>

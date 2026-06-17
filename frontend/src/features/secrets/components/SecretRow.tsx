@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Key, Eye, Loader2, Check, Copy, EyeOff, RotateCcw, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import type { Secret } from '../../../api/endpoints/secrets.api';
 import { useRevealSecret } from '../hooks/useRevealSecret';
+import { useDeleteSecret } from '../hooks/useDeleteSecret';
 import { useClipboard } from '../../../hooks/useClipboard';
 import { useProject } from '../../projects/hooks/useProject';
+import { EditSecretDialog } from './EditSecretDialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TableRow, TableCell } from '@/components/ui/table';
@@ -34,11 +36,13 @@ interface SecretRowProps {
 export const SecretRow: React.FC<SecretRowProps> = ({ project_id, secret }) => {
   const [rowState, setRowState] = useState<'masked' | 'revealing' | 'revealed' | 'error'>('masked');
   const [plaintext, setPlaintext] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
   
   const [secondsLeft, setSecondsLeft] = useState<number>(30);
   const [justCopied, setJustCopied] = useState(false);
   
   const { mutateAsync: fetchSecret } = useRevealSecret();
+  const { mutate: deleteSecret } = useDeleteSecret();
   const { copy } = useClipboard();
   const { data: project } = useProject(project_id);
   const isOwner = project?.isOwner || false;
@@ -90,6 +94,12 @@ export const SecretRow: React.FC<SecretRowProps> = ({ project_id, secret }) => {
       copy(plaintext);
       setJustCopied(true);
       setTimeout(() => setJustCopied(false), 1500);
+    }
+  };
+
+  const handleDelete = () => {
+    if (window.confirm('Are you sure you want to delete this secret?')) {
+      deleteSecret({ projectId: project_id, secretId: secret.id });
     }
   };
 
@@ -177,12 +187,12 @@ export const SecretRow: React.FC<SecretRowProps> = ({ project_id, secret }) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setEditOpen(true)}>
                 <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
               </DropdownMenuItem>
 
               {isOwner ? (
-                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
                   <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                 </DropdownMenuItem>
               ) : (
@@ -205,6 +215,12 @@ export const SecretRow: React.FC<SecretRowProps> = ({ project_id, secret }) => {
           </DropdownMenu>
         </div>
       </TableCell>
+      <EditSecretDialog
+        projectId={project_id}
+        secret={secret}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
     </TableRow>
   );
 };

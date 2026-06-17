@@ -2,11 +2,11 @@ import React from 'react';
 import { useSearchParams, useParams } from 'react-router-dom';
 import { useSecrets } from '../hooks/useSecrets';
 import { SecretRow } from './SecretRow';
+import { CreateSecretDialog } from './CreateSecretDialog';
 import { KeyRound, Plus } from 'lucide-react';
 import { EnvironmentTabs } from './EnvironmentTabs';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { toast } from 'sonner';
 
 export const SecretsTable: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
@@ -19,9 +19,11 @@ export const SecretsTable: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-4">
          <EnvironmentTabs />
-         <Button size="sm" onClick={() => toast.info('Secret creation backend integration is scheduled for the next phase!')}>
-           <Plus className="mr-1.5 h-3.5 w-3.5" /> Add secret
-         </Button>
+         <CreateSecretDialog projectId={projectId!} environment={env}>
+           <Button size="sm">
+             <Plus className="mr-1.5 h-3.5 w-3.5" /> Add secret
+           </Button>
+         </CreateSecretDialog>
       </div>
       <div className="overflow-hidden rounded-lg border border-border">
         <Table>
@@ -47,9 +49,11 @@ export const SecretsTable: React.FC = () => {
                   <p className="mb-4 text-sm text-muted-foreground">
                     Add your first secret to this environment.
                   </p>
-                  <Button size="sm" onClick={() => toast.info('Secret creation backend integration is scheduled for the next phase!')}>
-                    <Plus className="mr-1.5 h-3.5 w-3.5" /> Add secret
-                  </Button>
+                  <CreateSecretDialog projectId={projectId!} environment={env}>
+                    <Button size="sm">
+                      <Plus className="mr-1.5 h-3.5 w-3.5" /> Add secret
+                    </Button>
+                  </CreateSecretDialog>
                 </TableCell>
               </TableRow>
             ) : (

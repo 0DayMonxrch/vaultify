@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/0DayMonxrch/vaultify/cli/config"
@@ -43,7 +44,11 @@ type Secret struct {
 }
 
 func (c *Client) newRequest(method, path string) (*http.Request, error) {
-	url := fmt.Sprintf("%s%s", c.host, path)
+	host := strings.TrimRight(c.host, "/")
+	if !strings.HasSuffix(host, "/api/v1") {
+		host = fmt.Sprintf("%s/api/v1", host)
+	}
+	url := fmt.Sprintf("%s%s", host, path)
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, err

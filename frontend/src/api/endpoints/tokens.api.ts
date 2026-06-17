@@ -3,20 +3,21 @@ import { apiClient } from '../client';
 export interface ApiToken {
   id: string;
   name: string;
-  prefix: string;
-  role_scope: string;
+  token_prefix: string;
+  role: string;
   created_at: string;
   last_used_at: string | null;
+  revoked: boolean;
 }
 
 export interface CreateTokenPayload {
+  project_id: string;
   name: string;
-  role_scope: string; // 'read' | 'write'
+  role: string; // 'read' | 'write'
 }
 
 export interface CreateTokenResponse {
-  token: ApiToken;
-  raw_token: string;
+  token: string;
 }
 
 export const tokensApi = {

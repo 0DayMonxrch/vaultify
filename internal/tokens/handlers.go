@@ -123,16 +123,29 @@ func (h *Handlers) ListTokens(w http.ResponseWriter, r *http.Request) {
 
 	// We don't return the hash. We can map to a safe response.
 	type SafeToken struct {
-		ID          string `json:"id"`
-		ProjectID   string `json:"project_id"`
-		Name        string `json:"name"`
-		TokenPrefix string `json:"token_prefix"`
-		Role        string `json:"role"`
-		Revoked     bool   `json:"revoked"`
+		ID          string  `json:"id"`
+		ProjectID   string  `json:"project_id"`
+		Name        string  `json:"name"`
+		TokenPrefix string  `json:"token_prefix"`
+		Role        string  `json:"role"`
+		Revoked     bool    `json:"revoked"`
+		CreatedAt   string  `json:"created_at"`
+		LastUsedAt  *string `json:"last_used_at"`
 	}
 
 	var resp []SafeToken
 	for _, t := range tokens {
+		var lastUsed *string
+		if t.LastUsedAt.Valid {
+			str := t.LastUsedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+			lastUsed = &str
+		}
+
+		var createdAt string
+		if t.CreatedAt.Valid {
+			createdAt = t.CreatedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+		}
+
 		resp = append(resp, SafeToken{
 			ID:          uuid.UUID(t.ID.Bytes).String(),
 			ProjectID:   uuid.UUID(t.ProjectID.Bytes).String(),
@@ -140,6 +153,8 @@ func (h *Handlers) ListTokens(w http.ResponseWriter, r *http.Request) {
 			TokenPrefix: t.TokenPrefix,
 			Role:        t.Role,
 			Revoked:     t.Revoked,
+			CreatedAt:   createdAt,
+			LastUsedAt:  lastUsed,
 		})
 	}
 
