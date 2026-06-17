@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/httprate"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/rs/zerolog/log"
+	"time"
 
 	"github.com/0DayMonxrch/vaultify/internal/ctxkey"
 	"github.com/0DayMonxrch/vaultify/internal/db"
@@ -303,12 +305,73 @@ func (h *Handlers) GetMe(w http.ResponseWriter, r *http.Request) {
 // RegisterRoutes registers auth endpoints into Chi router
 func (h *Handlers) RegisterRoutes(r chi.Router, authenticator func(http.Handler) http.Handler) {
 	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register", h.Register)
+		// Separate rate limiters for registration and demo routes to optimize recruiter experience
+		registerLimiter := httprate.LimitByIP(5, 1*time.Hour)
+		demoLimiter := httprate.LimitByIP(15, 15*time.Minute)
+
+		r.With(registerLimiter).Post("/register", h.Register)
+		r.With(demoLimiter).Post("/demo", h.DemoLogin)
+
 		r.Post("/login", h.Login)
 		r.Post("/refresh", h.Refresh)
 		r.Delete("/logout", h.Logout) // Not strictly behind JWT in router, handled by Cookie
 
 		r.With(authenticator).Get("/me", h.GetMe)
+	})
+}
+
+// DemoLogin logs the user into a pre-configured shared sandbox account.
+// This eliminates the DOS vector of generating infinite users.
+func (h *Handlers) DemoLogin(w http.ResponseWriter, r *http.Request) {
+	demoEmail := "sandbox@vaultify.demo"
+
+	// 1. Fetch the pre-existing sandbox user
+	user, err := h.queries.GetUserByEmail(r.Context(), demoEmail)
+	if err != nil {
+		log.Error().Err(err).Msg("Sandbox account not found. Admin needs to create it.")
+		http.Error(w, "Sandbox environment not initialized by admin", http.StatusServiceUnavailable)
+		return
+	}
+
+	userIDStr := uuidToString(user.ID)
+	userAgent := r.Header.Get("User-Agent")
+
+	// 2. Create session in Redis
+	compositeToken, err := h.sessionMgr.CreateSession(r.Context(), userIDStr, userAgent)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to create demo session in redis")
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// 3. Set HttpOnly cookie
+	isProd := os.Getenv("ENV") == "production"
+	// #nosec G124
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    compositeToken,
+		Path:     "/",
+		MaxAge:   7 * 24 * 3600, // 7 days
+		HttpOnly: true,
+		Secure:   isProd,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	// 4. Generate JWT
+	accessToken, err := GenerateAccessToken(userIDStr, h.jwtSecret)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to generate access token for demo")
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	log.Info().Str("email", demoEmail).Msg("Recruiter logged into Shared Sandbox")
+
+	w.Header().Set("Content-Type", "application/json")
+	// #nosec G117
+	_ = json.NewEncoder(w).Encode(TokenResponse{
+		AccessToken: accessToken,
+		ExpiresIn:   600, // 10 minutes
 	})
 }
 

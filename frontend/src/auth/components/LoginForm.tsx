@@ -21,9 +21,10 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 export const LoginForm: React.FC = () => {
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const navigate = useNavigate();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -42,6 +43,24 @@ export const LoginForm: React.FC = () => {
       navigate('/projects');
     } catch (err: any) {
       setServerError(err?.response?.data?.message || 'Invalid credentials. Please try again.');
+    }
+  };
+
+  const onDemoClick = async () => {
+    try {
+      setIsDemoLoading(true);
+      setServerError(null);
+      await demoLogin();
+      navigate('/projects');
+    } catch (err: any) {
+      const errorData = err?.response?.data;
+      if (typeof errorData === 'string' && errorData.trim() !== '') {
+        setServerError(errorData);
+      } else {
+        setServerError('Demo login failed or rate-limited. Please try again later.');
+      }
+    } finally {
+      setIsDemoLoading(false);
     }
   };
 
@@ -100,13 +119,33 @@ export const LoginForm: React.FC = () => {
                 </FormItem>
               )} />
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              <Button type="submit" className="w-full" disabled={isSubmitting || isDemoLoading}>
                 {isSubmitting ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...</>
                 ) : "Sign in"}
               </Button>
             </form>
           </Form>
+
+          <div className="relative mt-4 mb-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">Or</span>
+            </div>
+          </div>
+
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            onClick={onDemoClick}
+            disabled={isSubmitting || isDemoLoading}
+          >
+            {isDemoLoading ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Provisioning Demo...</>
+            ) : "Try the Demo"}
+          </Button>
         </CardContent>
 
         <CardFooter className="justify-center">

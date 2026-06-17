@@ -15,6 +15,11 @@ export const login = async (credentials: Record<string, any>) => {
   return response.data;
 };
 
+export const demoLogin = async () => {
+  const response = await apiClient.post<TokenResponse>('/auth/demo');
+  return response.data;
+};
+
 export const register = async (credentials: Record<string, any>) => {
   const response = await apiClient.post<User>('/auth/register', credentials);
   return response.data;
