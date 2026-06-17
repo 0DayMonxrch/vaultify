@@ -1,0 +1,4 @@
+run:
+  # Tell the linter to analyze the code using Go 1.24 rules, 
+  # bypassing the 1.26.3 requirement in go.mod.
+  go: '1.24'
