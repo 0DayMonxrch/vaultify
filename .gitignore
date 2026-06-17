@@ -1,4 +1,39 @@
-*.exe*
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+server
+vaultify
+bin/
+
+# Test binary, profiling, and coverage
+*.test
+*.out
+*.prof
+
+# Node & Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.eslintcache
+npm-debug.log*
+
+# Environments and Secrets
 .env
-*.ps1
+.env.*
+*.pem
+*.key
+.vaultify/config
+
+# IDEs and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Project specific
+test_*.ps1
 test_e2e.go

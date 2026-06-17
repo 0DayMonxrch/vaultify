@@ -65,3 +65,12 @@ func (s *AuditService) ListProjectLogs(ctx context.Context, projectID uuid.UUID,
 		Offset:    offset,
 	})
 }
+
+// ListProjectLogsWithEmail retrieves logs joined with user emails
+func (s *AuditService) ListProjectLogsWithEmail(ctx context.Context, projectID uuid.UUID, limit, offset int32) ([]db.AuditLogWithEmailRow, error) {
+	return s.queries.ListAuditLogsWithEmail(ctx, pgtype.UUID{Bytes: projectID, Valid: true}, limit, offset)
+}
+
+func (s *AuditService) CountProjectLogs(ctx context.Context, projectID uuid.UUID) (int, error) {
+	return s.queries.CountAuditLogs(ctx, pgtype.UUID{Bytes: projectID, Valid: true})
+}

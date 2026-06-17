@@ -36,29 +36,63 @@ func (h *Handlers) HandleListAuditLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limitStr := r.URL.Query().Get("limit")
-	offsetStr := r.URL.Query().Get("offset")
-
 	limit := 50
-	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
-		limit = l
+	page := 1
+	pageStr := r.URL.Query().Get("page")
+	if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+		page = p
 	}
+	offset := (page - 1) * limit
 
-	offset := 0
-	if o, err := strconv.Atoi(offsetStr); err == nil && o >= 0 {
-		offset = o
-	}
-
-	logs, err := h.svc.ListProjectLogs(r.Context(), projectID, int32(limit), int32(offset))
+	logs, err := h.svc.ListProjectLogsWithEmail(r.Context(), projectID, int32(limit), int32(offset))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if logs == nil {
-		w.Write([]byte("[]"))
-		return
+	total, _ := h.svc.CountProjectLogs(r.Context(), projectID)
+	totalPages := total / limit
+	if total%limit > 0 {
+		totalPages++
 	}
-	json.NewEncoder(w).Encode(logs)
+
+	type AuditEvent struct {
+		ID            string `json:"id"`
+		ProjectID     string `json:"project_id"`
+		UserEmail     string `json:"user_email"`
+		Action        string `json:"action"`
+		TargetKeyName string `json:"target_key_name"`
+		IpAddress     string `json:"ip_address"`
+		CreatedAt     string `json:"created_at"`
+	}
+
+	var events []AuditEvent
+	for _, l := range logs {
+		ip := ""
+		if l.IpAddress != nil {
+			ip = l.IpAddress.String()
+		}
+		events = append(events, AuditEvent{
+			ID:            strconv.FormatInt(l.ID, 10),
+			ProjectID:     uuid.UUID(l.ProjectID.Bytes).String(),
+			UserEmail:     l.UserEmail,
+			Action:        l.Action,
+			TargetKeyName: l.KeyName.String,
+			IpAddress:     ip,
+			CreatedAt:     l.CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
+		})
+	}
+
+	if events == nil {
+		events = []AuditEvent{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data":        events,
+		"total":       total,
+		"page":        page,
+		"per_page":    limit,
+		"total_pages": totalPages,
+	})
 }

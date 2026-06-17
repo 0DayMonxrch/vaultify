@@ -39,6 +39,9 @@ WORKDIR /
 # Copy the compiled binary from the backend-builder stage
 COPY --from=backend-builder /vaultify-server /vaultify-server
 
+# Copy the database migrations
+COPY --from=backend-builder /app/db /db
+
 # Ensure we run as a non-root user (standard in distroless images)
 USER nonroot:nonroot
 

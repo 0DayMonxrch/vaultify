@@ -4,15 +4,15 @@ services:
     container_name: vaultify-db
     environment:
       # In production, these should be passed securely and not defaulted to these values
-      POSTGRES_USER: ${POSTGRES_USER:-vaultify}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vaultify_password}
-      POSTGRES_DB: ${POSTGRES_DB:-vaultify}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - vaultify_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vaultify} -d ${POSTGRES_DB:-vaultify}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -41,9 +41,8 @@ services:
     env_file:
       - .env
     environment:
-      # Override the DB and Redis URLs to point to the local containers if not set in .env
-      DATABASE_URL: ${DATABASE_URL:-postgres://${POSTGRES_USER:-vaultify}:${POSTGRES_PASSWORD:-vaultify_password}@postgres:5432/${POSTGRES_DB:-vaultify}?sslmode=disable}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy

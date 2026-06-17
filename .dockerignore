@@ -2,23 +2,46 @@
 .git
 .gitignore
 
+# OS & IDEs
+.DS_Store
+.idea/
+.vscode/
+
 # Go
 vendor/
-server.exe
-server.exe~
 *.exe
+*.exe~
+*.test
+*.prof
+*.out
+bin/
 
 # Environments and Secrets
 .env
 .env.*
+**/.env
+**/.env.*
 *.pem
 *.key
+**/*.pem
+**/*.key
+.vaultify/
 
 # Temporary files
 tmp/
 *.tmp
 *.log
 
-# Frontend (dist will be rebuilt or copied depending on the stage)
+# Frontend (dist will be rebuilt during Docker build)
 frontend/node_modules/
 frontend/dist/
+frontend/.eslintcache
+**/*.tsbuildinfo
+
+# Project Meta
+docs/
+*.md
+Makefile
+compose.yaml
+test_*.ps1
+test_e2e.go

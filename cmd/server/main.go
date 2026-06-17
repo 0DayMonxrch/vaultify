@@ -194,18 +194,23 @@ func main() {
 
 	r.Get("/*", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/")
-		if path == "" {
-			path = "index.html"
-		}
 
+		// Check if the requested file exists in the embedded FS
 		f, err := subFS.Open(path)
 		if err != nil {
-			path = "index.html"
-		} else {
-			f.Close()
+			// React Router fallback: serve index.html directly
+			indexHtml, err := fs.ReadFile(subFS, "index.html")
+			if err != nil {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write(indexHtml)
+			return
 		}
+		f.Close()
 
-		r.URL.Path = "/" + path
+		// Let the standard file server handle existing files (and / directory root)
 		fileServer.ServeHTTP(w, r)
 	})
 
