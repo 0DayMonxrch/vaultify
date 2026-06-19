@@ -6,8 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"time"
 
 	"github.com/0DayMonxrch/vaultify/cli/client"
+	"github.com/briandowns/spinner"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -16,13 +19,19 @@ var runCmd = &cobra.Command{
 	Short: "Run a subprocess with decrypted secrets injected into its environment",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+		s.Suffix = " Fetching and decrypting secrets..."
+		s.Start()
+
 		c, err := client.NewClient()
 		if err != nil {
+			s.Stop()
 			return err
 		}
 
 		projects, err := c.ListProjects()
 		if err != nil {
+			s.Stop()
 			return err
 		}
 
@@ -35,11 +44,13 @@ var runCmd = &cobra.Command{
 		}
 
 		if targetProjectID == "" {
+			s.Stop()
 			return fmt.Errorf("project with slug %q not found", projectSlug)
 		}
 
 		secretsMeta, err := c.ListSecrets(targetProjectID, secretEnv)
 		if err != nil {
+			s.Stop()
 			return err
 		}
 
@@ -48,10 +59,14 @@ var runCmd = &cobra.Command{
 		for _, sm := range secretsMeta {
 			val, err := c.GetDecryptedSecret(targetProjectID, sm.ID)
 			if err != nil {
+				s.Stop()
 				return fmt.Errorf("failed to fetch secret %s: %w", sm.KeyName, err)
 			}
 			envVars = append(envVars, fmt.Sprintf("%s=%s", sm.KeyName, val))
 		}
+
+		s.Stop()
+		color.Green("✓ Secrets injected successfully. Starting process...\n")
 
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

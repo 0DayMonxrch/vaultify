@@ -12,6 +12,7 @@ bin/
 *.test
 *.out
 *.prof
+scripts/
 
 # Node & Frontend
 frontend/node_modules/

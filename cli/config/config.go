@@ -50,6 +50,11 @@ func SaveConfig(cfg *Config) error {
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
+
+	// Explicitly enforce 0600 in case the file already existed or umask interfered
+	if err := os.Chmod(path, 0600); err != nil {
+		return fmt.Errorf("failed to set 0600 permissions on config: %w", err)
+	}
 	return nil
 }
 

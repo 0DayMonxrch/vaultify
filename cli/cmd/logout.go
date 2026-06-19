@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/0DayMonxrch/vaultify/cli/config"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +15,7 @@ var logoutCmd = &cobra.Command{
 		if err := config.DeleteConfig(); err != nil {
 			return fmt.Errorf("failed to logout: %w", err)
 		}
-		cmd.Println("Successfully logged out.")
+		color.Green("✓ Successfully logged out.")
 		return nil
 	},
 }
