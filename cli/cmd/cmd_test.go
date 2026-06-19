@@ -92,7 +92,7 @@ func TestCLILoginValidation(t *testing.T) {
 		t.Fatal("expected login validation error")
 	}
 
-	if !strings.Contains(err.Error(), "--token and --host are required") {
+	if !strings.Contains(err.Error(), "--token is required") {
 		t.Errorf("expected validation message, got: %v", err)
 	}
 }

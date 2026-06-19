@@ -38,11 +38,11 @@ var projectsListCmd = &cobra.Command{
 		}
 
 		if len(projects) == 0 {
-			color.Yellow("No projects found.")
+			fmt.Fprintln(cmd.OutOrStdout(), color.YellowString("No projects found."))
 			return nil
 		}
 
-		color.Cyan("\nAVAILABLE PROJECTS")
+		fmt.Fprintln(cmd.OutOrStdout(), color.CyanString("\nAVAILABLE PROJECTS"))
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 8, 4, ' ', 0)
 		_, _ = fmt.Fprintln(w, "ID\tNAME\tSLUG\tCREATED AT")
 		for _, p := range projects {

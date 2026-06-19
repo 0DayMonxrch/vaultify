@@ -62,11 +62,11 @@ var secretsListCmd = &cobra.Command{
 		}
 
 		if len(secrets) == 0 {
-			color.Yellow("No secrets found.")
+			fmt.Fprintln(cmd.OutOrStdout(), color.YellowString("No secrets found."))
 			return nil
 		}
 
-		color.Cyan("\nPROJECT SECRETS")
+		fmt.Fprintln(cmd.OutOrStdout(), color.CyanString("\nPROJECT SECRETS"))
 		w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 8, 4, ' ', 0)
 		_, _ = fmt.Fprintln(w, "KEY\tENVIRONMENT\tCREATED AT\tUPDATED AT")
 		for _, s := range secrets {

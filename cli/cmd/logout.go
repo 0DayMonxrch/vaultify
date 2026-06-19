@@ -15,7 +15,7 @@ var logoutCmd = &cobra.Command{
 		if err := config.DeleteConfig(); err != nil {
 			return fmt.Errorf("failed to logout: %w", err)
 		}
-		color.Green("✓ Successfully logged out.")
+		fmt.Fprintln(cmd.OutOrStdout(), color.GreenString("✓ Successfully logged out."))
 		return nil
 	},
 }

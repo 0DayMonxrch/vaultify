@@ -33,7 +33,7 @@ var loginCmd = &cobra.Command{
 		if err := config.SaveConfig(cfg); err != nil {
 			return fmt.Errorf("failed to save config: %w", err)
 		}
-		color.Green("✓ Successfully logged in.")
+		fmt.Fprintln(cmd.OutOrStdout(), color.GreenString("✓ Successfully logged in."))
 		return nil
 	},
 }
