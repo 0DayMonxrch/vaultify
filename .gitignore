@@ -38,3 +38,5 @@ Thumbs.db
 test_*.ps1
 test_e2e.go
 security-fix/
+content/
+cli-usage.md

@@ -92,24 +92,27 @@ graph TD
 <summary><b>How the Cryptography Works</b></summary>
 <br>
 
-Vaultify employs **Argon2id** and **AES-256-GCM** to enforce strict encryption at rest.
+Vaultify employs **Argon2id** and **AES-256-GCM** in a single-tier encryption engine. Rather than managing a fleet of data keys, we derive a unique project key dynamically and encrypt secrets directly, accepting O(N) key rotation costs in exchange for architectural simplicity. If an attacker dumps the database, they retrieve mathematically useless ciphertext without the off-disk `MASTER_KEY`.
 
-Every project generates a cryptographically secure 32-byte salt upon creation, which is stored in the database. When a secret is accessed or written, the system derives a unique encryption key by combining the project's salt with a system-level `MASTER_KEY` via the Argon2id Key Derivation Function. 
-
-> **NOTE:** The `MASTER_KEY` is strictly an environment variable and is never written to disk. If lost, all encrypted secrets are mathematically unrecoverable.
-
-The derived key is used to encrypt the plaintext secret using AES-256-GCM. Only the ciphertext and a random 12-byte nonce are stored in PostgreSQL. If an attacker successfully dumps the database, they retrieve mathematically useless ciphertext, as decryption is impossible without the off-disk `MASTER_KEY`. Post-decryption, plaintext values are zeroed from memory.
+[Read the full deep-dive →](https://dibyadipan.hashnode.dev/vaultify-encryption-design)
 </details>
 
 <details>
 <summary><b>How the CLI Injection Works</b></summary>
 <br>
 
-The core value proposition of the Vaultify CLI is entirely eliminating `.env` files from developer machines. It achieves this using the POSIX `fork-exec` model.
+The Vaultify CLI eliminates `.env` files by injecting secrets directly into a child process's memory stack using the POSIX `fork` and `execve` system calls. By inheriting the host environment and passing decrypted strings through the OS kernel, credentials never touch the disk. This approach forces us to navigate the operational reality of Go's immutable strings and garbage collection lag.
 
-When executing `vaultify run -- <cmd>`, the CLI fetches the decrypted secrets into memory and constructs a slice of strings formatted as `KEY=VALUE`. Using Go's `os/exec` package, the CLI prepares the target subprocess and explicitly sets its environment state: `cmd.Env = append(os.Environ(), secrets...)`. 
+[Read the full deep-dive →](https://dibyadipan.hashnode.dev/vaultify-cli-secret-injection)
+</details>
 
-The target application is executed as a child process, inheriting the secrets directly from the OS kernel. The secrets never touch the disk. While Go's garbage collector limitations prevent deterministic zeroing of immutable string types in memory, this approach ensures that volatile credentials leave no permanent filesystem footprint.
+<details>
+<summary><b>Stateless Access, Stateful Refresh</b></summary>
+<br>
+
+Vaultify balances high-throughput JWT authorization with the ability to instantly kill compromised sessions using a dual-token architecture. Access tokens live strictly in short-lived memory, while long-lived refresh tokens are secured in `HttpOnly` cookies. Global logouts are achieved in O(1) time by pipelining Redis Set operations, and token theft is caught via strict replay detection.
+
+[Read the full deep-dive →](https://dibyadipan.hashnode.dev/vaultify-auth-session-management)
 </details>
 
 ---
